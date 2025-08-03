@@ -1,10 +1,14 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    const IS_ON_RENDER = window.location.hostname.includes('onrender.com');
-    // ВАЖНО: ЗАМЕНИТЕ 'your-backend-name' НА РЕАЛЬНОЕ ИМЯ ВАШЕГО БЭКЕНД СЕРВИСА НА RENDER
+    // ----- ГЛОБАЛЬНЫЕ НАСТРОЙКИ -----
+
+    // ЖЕСТКО ПРОПИСЫВАЕМ ПРАВИЛЬНЫЙ АДРЕС ВАШЕГО БЭКЕНДА
+    // Убедитесь, что имя 'korean-shop-backend' - верное.
     const API_BASE_URL = 'https://korean-shop-backend.onrender.com';
- 
-let allProducts = [];
+
+    // ---------------------------------------------------
+
+    let allProducts = [];
     let favorites = JSON.parse(localStorage.getItem('koreanShopFavorites')) || [];
     let currentProductImages = [];
     let currentImageIndex = 0;
@@ -48,8 +52,11 @@ let allProducts = [];
             const productsUrl = `${API_BASE_URL}/api/products/`;
             const categoriesUrl = `${API_BASE_URL}/api/categories/`;
 
-            console.log("Запрос на товары:", productsUrl); // Лог для отладки
-            console.log("Запрос на категории:", categoriesUrl);
+            // ==========================================================
+            // ============= САМАЯ ВАЖНАЯ ЧАСТЬ ДЛЯ ОТЛАДКИ =============
+            // ==========================================================
+            console.log("ПЫТАЮСЬ СДЕЛАТЬ ЗАПРОС НА АДРЕС:", productsUrl);
+            // ==========================================================
 
             const [productsResponse, categoriesResponse] = await Promise.all([
                 fetch(productsUrl),
@@ -62,6 +69,8 @@ let allProducts = [];
             allProducts = await productsResponse.json();
             const categories = await categoriesResponse.json();
             
+            console.log("Данные успешно получены!", allProducts);
+
             displayCategoryFilters(categories);
             displayProducts(allProducts);
             updateFavoritesCounter();
@@ -85,6 +94,7 @@ let allProducts = [];
     function showPrevImage() { if (!currentProductImages || currentProductImages.length <= 1) return; currentImageIndex = (currentImageIndex - 1 + currentProductImages.length) % currentProductImages.length; updateModalImage(); }
     function displayFavoritesModal() { if (!favoritesGrid) return; favoritesGrid.innerHTML = ''; const favoriteProducts = allProducts.filter(p => favorites.includes(p.id)); if (favoriteProducts.length === 0) { favoritesEmptyMsg.style.display = 'block'; } else { favoritesEmptyMsg.style.display = 'none'; favoriteProducts.forEach(product => { favoritesGrid.innerHTML += `<div class="favorite-item"><button class="favorite-item__remove" data-id="${product.id}" aria-label="Удалить из избранного">&times;</button><img src="${product.images[0]}" alt="${product.name}"><h4>${product.name}</h4><p>${parseFloat(product.price).toLocaleString('ru-RU')} ₽</p></div>`; }); } addRemoveFromFavoritesListeners(); if(favoritesModal) favoritesModal.style.display = 'flex'; }
     function addRemoveFromFavoritesListeners() { document.querySelectorAll('.favorite-item__remove').forEach(button => { button.addEventListener('click', (e) => { const productId = parseInt(e.currentTarget.dataset.id, 10); toggleFavorite(productId); displayFavoritesModal(); }); }); }
+
     if(modalNavNext) modalNavNext.addEventListener('click', showNextImage);
     if(modalNavPrev) modalNavPrev.addEventListener('click', showPrevImage);
     if(modalImage){ modalImage.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; }); modalImage.addEventListener('touchend', (e) => { const touchEndX = e.changedTouches[0].clientX; const swipeThreshold = 50; if (touchStartX - touchEndX > swipeThreshold) showNextImage(); else if (touchEndX - touchStartX > swipeThreshold) showPrevImage(); }); }
@@ -93,7 +103,7 @@ let allProducts = [];
     document.querySelectorAll('a[href^="#"]').forEach(anchor => { anchor.addEventListener('click', function (e) { e.preventDefault(); const target = document.querySelector(this.getAttribute('href')); if(target) target.scrollIntoView({ behavior: 'smooth' }); }); });
     if(heroBg) heroBg.addEventListener('mousemove', e => { const x = (e.clientX / window.innerWidth) * 100; const y = (e.clientY / window.innerHeight) * 100; heroBg.style.setProperty('--x', `${x}%`); heroBg.style.setProperty('--y', `${y}%`); });
     if (typeof ymaps !== 'undefined') { ymaps.ready(() => { try { const myMap = new ymaps.Map("map", { center: [42.0592, 48.2913], zoom: 16 }); const myPlacemark = new ymaps.Placemark([42.0592, 48.2913], { hintContent: 'KoreanAsiaShop', balloonContent: 'ул. Модная, д. 5' }, { iconLayout: 'default#image', iconImageHref: 'https://img.icons8.com/ios-filled/50/e6a4b4/marker.png', iconImageSize: [40, 40], iconImageOffset: [-20, -40] }); myMap.geoObjects.add(myPlacemark); myMap.controls.remove('geolocationControl').remove('searchControl').remove('trafficControl').remove('typeSelector').remove('rulerControl'); } catch (error) { console.error("Ошибка при инициализации Яндекс.Карт.", error); const mapEl = document.getElementById('map'); if(mapEl) mapEl.innerHTML = '<p style="text-align:center; padding: 2rem;">Не удалось загрузить карту.</p>'; } }); }
-
+    
     window.addEventListener('load', () => {
         if(preloader) preloader.classList.add('hidden');
         document.body.classList.remove('loading');
