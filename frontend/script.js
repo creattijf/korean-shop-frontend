@@ -1,9 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    const IS_ON_RENDER = window.location.hostname.includes('onrender.com');
-    // ВАЖНО: ЗАМЕНИТЕ 'your-backend-name' НА РЕАЛЬНОЕ ИМЯ ВАШЕГО БЭКЕНД СЕРВИСА НА RENDER
-    const API_BASE_URL = IS_ON_RENDER 
-        ? 'https://korean-shop-backend.onrender.com/' 
+    // ----- ГЛОБАЛЬНЫЕ НАСТРОЙКИ И ПЕРЕМЕННЫЕ -----
+
+    // ВАЖНО: УБРАЛИ СЛЭШ В КОНЦЕ URL
+    const API_BASE_URL = window.location.hostname.includes('onrender.com') 
+        ? 'https://korean-shop-backend.onrender.com' 
         : 'http://127.0.0.1:8000';
 
     let allProducts = [];
@@ -12,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentImageIndex = 0;
     let touchStartX = 0;
 
+    // ----- ПОИСК ЭЛЕМЕНТОВ НА СТРАНИЦЕ -----
     const preloader = document.querySelector('.preloader');
     const heroTitle = document.querySelector('.hero__title');
     const heroBg = document.querySelector('.hero__gradient-bg');
@@ -27,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalNavNext = productModal.querySelector('.modal-nav--next');
     const modalImage = document.getElementById('modalImg');
 
+    // ----- АНИМАЦИИ -----
     function initAnimations() {
         gsap.registerPlugin(ScrollTrigger);
         gsap.to('.hero__title .line-mask span', { y: 0, duration: 1, stagger: 0.2, ease: 'power3.out', delay: 0.2 });
@@ -45,6 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
+    // ----- ОСНОВНЫЕ ФУНКЦИИ ПРИЛОЖЕНИЯ -----
     async function initApp() {
         try {
             const [productsResponse, categoriesResponse] = await Promise.all([
@@ -56,7 +60,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const categories = await categoriesResponse.json();
             displayCategoryFilters(categories);
             displayProducts(allProducts);
-            fillLookbooks(allProducts);
             updateFavoritesCounter();
         } catch (error) {
             console.error("Could not fetch data:", error);
@@ -77,37 +80,77 @@ document.addEventListener('DOMContentLoaded', () => {
         addFilterButtonListeners();
     }
     
-    function displayProducts(productsToDisplay) { if (!productGrid) return; productGrid.innerHTML = ''; if (productsToDisplay.length === 0) { productGrid.innerHTML = '<p style="text-align:center; width:100%;">Товары в этой категории скоро появятся.</p>'; return; } productsToDisplay.forEach(product => { const isFavorite = favorites.includes(product.id); const mainImage = product.images[0] || 'https://via.placeholder.com/400x350.png?text=No+Image'; const altImage = product.images.length > 1 ? product.images[1] : mainImage; productGrid.innerHTML += `<div class="product-card" data-category="${product.category}"><div class="product-card__image-wrapper" data-id="${product.id}"><img class="product-card__image--main" src="${mainImage}" alt="${product.name}"><img class="product-card__image--alt" src="${altImage}" alt="${product.name}"></div><div class="favorite-icon ${isFavorite ? 'active' : ''}" data-id="${product.id}"><i class="fa-solid fa-heart"></i></div><div class="card-info"><h3>${product.name}</h3><p class="price">${parseFloat(product.price).toLocaleString('ru-RU')} ₽</p><button class="btn-details" data-id="${product.id}">Подробнее</button></div></div>`; }); addAllEventListeners(); }
-    
-    function fillLookbooks(products) {
-        const lookbookContainers = document.querySelectorAll('.look-products');
-        const lookbookMapping = { '1': [2, 3], '2': [5, 6] };
-        lookbookContainers.forEach(container => {
-            const lookId = container.dataset.lookId;
-            const productIds = lookbookMapping[lookId];
-            if (productIds) {
-                container.innerHTML = '';
-                productIds.forEach(id => {
-                    const product = products.find(p => p.id === id);
-                    if (product && product.images.length > 0) {
-                        const mainImage = product.images[0];
-                        container.innerHTML += `<div class="look-product-card" data-id="${product.id}"><img src="${mainImage}" alt="${product.name}"><span>${product.name}</span></div>`;
-                    }
-                });
-            }
+    function displayProducts(productsToDisplay) {
+        if (!productGrid) return;
+        productGrid.innerHTML = '';
+        if (productsToDisplay.length === 0) {
+            productGrid.innerHTML = '<p style="text-align:center; width:100%;">Товары в этой категории скоро появятся.</p>';
+            return;
+        }
+        productsToDisplay.forEach(product => {
+            const isFavorite = favorites.includes(product.id);
+            const mainImage = product.images[0] || 'https://via.placeholder.com/400x350.png?text=No+Image';
+            const altImage = product.images.length > 1 ? product.images[1] : mainImage;
+            productGrid.innerHTML += `
+                <div class="product-card" data-category="${product.category}">
+                    <div class="product-card__image-wrapper" data-id="${product.id}">
+                        <img class="product-card__image--main" src="${mainImage}" alt="${product.name}">
+                        <img class="product-card__image--alt" src="${altImage}" alt="${product.name}">
+                    </div>
+                    <div class="favorite-icon ${isFavorite ? 'active' : ''}" data-id="${product.id}">
+                        <i class="fa-solid fa-heart"></i>
+                    </div>
+                    <div class="card-info">
+                        <h3>${product.name}</h3>
+                        <p class="price">${parseFloat(product.price).toLocaleString('ru-RU')} ₽</p>
+                        <button class="btn-details" data-id="${product.id}">Подробнее</button>
+                    </div>
+                </div>`;
         });
-        addLookbookCardListeners();
+        addAllEventListeners();
+    }
+    
+    function addFilterButtonListeners() {
+        const filterButtons = document.querySelectorAll('.filter-btn');
+        filterButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                filterButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                const filter = button.dataset.filter;
+                const filteredProducts = (filter === 'all') ? allProducts : allProducts.filter(product => product.category === filter);
+                displayProducts(filteredProducts);
+            });
+        });
     }
 
-    function addFilterButtonListeners() { const filterButtons = document.querySelectorAll('.filter-btn'); filterButtons.forEach(button => { button.addEventListener('click', () => { filterButtons.forEach(btn => btn.classList.remove('active')); button.classList.add('active'); const filter = button.dataset.filter; const filteredProducts = (filter === 'all') ? allProducts : allProducts.filter(product => product.category === filter); displayProducts(filteredProducts); }); }); }
-    function showProductInModal(product) { if (!product) return; document.getElementById('modalTitle').textContent = product.name; document.getElementById('modalPrice').textContent = `${parseFloat(product.price).toLocaleString('ru-RU')} ₽`; currentProductImages = product.images || []; currentImageIndex = 0; const showNav = currentProductImages && currentProductImages.length > 1; modalNavPrev.classList.toggle('hidden', !showNav); modalNavNext.classList.toggle('hidden', !showNav); updateModalImage(); productModal.style.display = 'flex'; }
-    
-    function addAllEventListeners() {
-        document.querySelectorAll('.btn-details, .product-card__image-wrapper').forEach(el => { el.addEventListener('click', (e) => { const productId = parseInt(e.currentTarget.dataset.id, 10); const product = allProducts.find(p => p.id === productId); if (product) showProductInModal(product); }); });
-        document.querySelectorAll('.favorite-icon').forEach(icon => { icon.addEventListener('click', (e) => { const productId = parseInt(e.currentTarget.dataset.id, 10); toggleFavorite(productId); }); });
+    function showProductInModal(product) {
+        if (!product) return;
+        document.getElementById('modalTitle').textContent = product.name;
+        document.getElementById('modalPrice').textContent = `${parseFloat(product.price).toLocaleString('ru-RU')} ₽`;
+        currentProductImages = product.images || [];
+        currentImageIndex = 0;
+        const showNav = currentProductImages && currentProductImages.length > 1;
+        modalNavPrev.classList.toggle('hidden', !showNav);
+        modalNavNext.classList.toggle('hidden', !showNav);
+        updateModalImage();
+        productModal.style.display = 'flex';
     }
     
-    function addLookbookCardListeners() {
+    function addAllEventListeners() {
+        document.querySelectorAll('.btn-details, .product-card__image-wrapper').forEach(el => {
+            el.addEventListener('click', (e) => {
+                const productId = parseInt(e.currentTarget.dataset.id, 10);
+                const product = allProducts.find(p => p.id === productId);
+                if (product) showProductInModal(product);
+            });
+        });
+        document.querySelectorAll('.favorite-icon').forEach(icon => {
+            icon.addEventListener('click', (e) => {
+                const productId = parseInt(e.currentTarget.dataset.id, 10);
+                toggleFavorite(productId);
+            });
+        });
+        // Добавляем слушатели для карточек в Lookbook
         document.querySelectorAll('.look-product-card').forEach(card => {
             card.addEventListener('click', (e) => {
                 const productId = parseInt(e.currentTarget.dataset.id, 10);
@@ -149,6 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ----- УСТАНОВКА СЛУШАТЕЛЕЙ СОБЫТИЙ -----
     if(modalNavNext) modalNavNext.addEventListener('click', showNextImage);
     if(modalNavPrev) modalNavPrev.addEventListener('click', showPrevImage);
     if(modalImage){ modalImage.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; }); modalImage.addEventListener('touchend', (e) => { const touchEndX = e.changedTouches[0].clientX; const swipeThreshold = 50; if (touchStartX - touchEndX > swipeThreshold) showNextImage(); else if (touchEndX - touchStartX > swipeThreshold) showPrevImage(); }); }
@@ -158,11 +202,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if(heroBg) heroBg.addEventListener('mousemove', e => { const x = (e.clientX / window.innerWidth) * 100; const y = (e.clientY / window.innerHeight) * 100; heroBg.style.setProperty('--x', `${x}%`); heroBg.style.setProperty('--y', `${y}%`); });
     if (typeof ymaps !== 'undefined') { ymaps.ready(() => { try { const myMap = new ymaps.Map("map", { center: [42.0592, 48.2913], zoom: 16 }); const myPlacemark = new ymaps.Placemark([42.0592, 48.2913], { hintContent: 'KoreanAsiaShop', balloonContent: 'ул. Модная, д. 5' }, { iconLayout: 'default#image', iconImageHref: 'https://img.icons8.com/ios-filled/50/e6a4b4/marker.png', iconImageSize: [40, 40], iconImageOffset: [-20, -40] }); myMap.geoObjects.add(myPlacemark); myMap.controls.remove('geolocationControl').remove('searchControl').remove('trafficControl').remove('typeSelector').remove('rulerControl'); } catch (error) { console.error("Ошибка при инициализации Яндекс.Карт.", error); const mapEl = document.getElementById('map'); if(mapEl) mapEl.innerHTML = '<p style="text-align:center; padding: 2rem;">Не удалось загрузить карту.</p>'; } }); }
     
+    // ----- ЗАПУСК ПРИЛОЖЕНИЯ -----
     window.addEventListener('load', () => {
         if(preloader) preloader.classList.add('hidden');
         document.body.classList.remove('loading');
         initAnimations();
     });
+    
     initApp();
-
 });
